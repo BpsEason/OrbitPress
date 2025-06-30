@@ -22,29 +22,37 @@ OrbitPress 是一個專為媒體平台設計的多租戶內容管理系統（CMS
 
 ```mermaid
 graph TD
-    A[User-Browser] -->|HTTP/HTTPS| B[Ingress <br> api.yourdomain.com, app.yourdomain.com]
-    
-    subgraph Kubernetes-Cluster
-        B -->|Route /| C[FastAPI-Gateway <br> port: 80, 9001]
-        B -->|Route /| D[Next.js-Frontend <br> port: 3000]
-        
-        C -->|API Request| E[Laravel-Backend <br> port: 80, 9000]
-        C -->|TTS Request| F[GCP-Text-to-Speech]
-        C -->|Notification Event| G[RabbitMQ]
-        
-        E -->|Central/Tenant DB| H[PostgreSQL]
-        E -->|Article Data| I[MongoDB]
-        E -->|Search Index| J[Elasticsearch]
-        E -->|Notification Queue| G
-        E -->|Email Notification| K[Mailhog/SMTP]
-        E -->|Push Notification| L[Firebase]
-        
-        M[Prometheus <br> port: 9090] -->|Collect Metrics| C
-        M -->|Collect Metrics| E
-        N[Grafana <br> port: 3001] -->|Query Data| M
-    end
+  %% ========== 外部用戶與入口 ==========
+  A[💻 User Browser] -->|HTTPS| B[🔗 Ingress Controller<br/>api.yourdomain.com / app.yourdomain.com]
 
-    D -->|API Request| C
+  %% ========== Kubernetes Cluster ==========
+  subgraph Kubernetes Cluster
+
+    %% 前端與 API Gateway
+    B -->|Path / | D[🌐 Next.js Frontend<br/>port: 3000]
+    B -->|Path /api /graphql /tts | C[🚪 FastAPI Gateway<br/>port: 80, 9001]
+
+    %% FastAPI 與後端系統整合
+    C -->|🔁 API Proxy| E[🧱 Laravel Backend<br/>port: 80, 9000]
+    C -->|🔊 Text-to-Speech| F[(🧠 GCP TTS API)]
+    C -->|📨 Events| G[(📬 RabbitMQ)]
+
+    %% Laravel 與資料層整合
+    E -->|📘 Relational DB| H[(🗄️ PostgreSQL)]
+    E -->|📚 Article Data| I[(🧾 MongoDB)]
+    E -->|🔍 Search Index| J[(📦 Elasticsearch)]
+    E -->|📧 Email| K[(📮 Mailhog / SMTP)]
+    E -->|📲 Push| L[(🚀 Firebase FCM)]
+    E -->|📨 Event Queue| G
+
+    %% 觀測系統與指標追蹤
+    M[📈 Prometheus<br/>port: 9090] -->|Collect Metrics| C
+    M -->|Collect Metrics| E
+    N[📊 Grafana<br/>port: 3001] -->|Dashboard| M
+  end
+
+  %% Next.js 與 FastAPI 閘道串接
+  D -->|API Request| C
 ```
 
 **說明**：
