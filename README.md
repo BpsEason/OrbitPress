@@ -161,40 +161,40 @@ OrbitPress 是一個專為媒體平台打造的多租戶內容管理系統（CMS
 
 ## 系統架構
 
-以下是 OrbitPress 的系統架構圖，展示核心服務與外部服務的互動（標籤已優化以避免 Mermaid 渲染問題）。
+以下是 OrbitPress 的系統架構圖，使用中文標籤（避免圓括號）並優化以確保 Mermaid 渲染兼容，展示核心服務與外部服務的互動。
 
 ```mermaid
 graph TD
-    A[User-Browser] -->|HTTP/HTTPS| B[Ingress <br> api.yourdomain.com, app.yourdomain.com]
+    A[用戶瀏覽器] -->|HTTP/HTTPS| B[入口控制器 <br> api.yourdomain.com, app.yourdomain.com]
     
-    subgraph Kubernetes-Cluster
-        B -->|Route /| C[FastAPI-Gateway <br> port: 80, 9001]
-        B -->|Route /| D[Next.js-Frontend <br> port: 3000]
+    subgraph Kubernetes集群
+        B -->|路由 /| C[FastAPI閘道 <br> 端口: 80, 9001]
+        B -->|路由 /| D[Next.js前端 <br> 端口: 3000]
         
-        C -->|API Request| E[Laravel-Backend <br> port: 80, 9000]
-        C -->|TTS Request| F[GCP-Text-to-Speech]
-        C -->|Notification Event| G[RabbitMQ]
+        C -->|API請求| E[Laravel後端 <br> 端口: 80, 9000]
+        C -->|語音合成請求| F[GCP語音合成]
+        C -->|通知事件| G[RabbitMQ]
         
-        E -->|Central/Tenant DB| H[PostgreSQL]
-        E -->|Article Data| I[MongoDB]
-        E -->|Search Index| J[Elasticsearch]
-        E -->|Notification Queue| G
-        E -->|Email Notification| K[Mailhog/SMTP]
-        E -->|Push Notification| L[Firebase]
+        E -->|中央/租戶資料庫| H[PostgreSQL]
+        E -->|文章數據| I[MongoDB]
+        E -->|搜尋索引| J[Elasticsearch]
+        E -->|通知隊列| G
+        E -->|電子郵件通知| K[Mailhog/SMTP]
+        E -->|推送通知| L[Firebase]
         
-        M[Prometheus <br> port: 9090] -->|Collect Metrics| C
-        M -->|Collect Metrics| E
-        N[Grafana <br> port: 3001] -->|Query Data| M
+        M[Prometheus <br> 端口: 9090] -->|收集指標| C
+        M -->|收集指標| E
+        N[Grafana <br> 端口: 3001] -->|查詢數據| M
     end
 
-    D -->|API Request| C
+    D -->|API請求| C
 ```
 
 **說明**：
-- **User-Browser**：用戶透過 Ingress 訪問前端或 API。
-- **FastAPI-Gateway**：統一處理 API 請求、JWT 驗證和 TTS 請求。
-- **Laravel-Backend**：處理核心業務邏輯，存取多個資料庫。
-- **Prometheus/Grafana**：監控服務性能。
+- **用戶瀏覽器**：透過入口控制器訪問前端或 API。
+- **FastAPI閘道**：統一處理 API 請求、JWT 驗證和語音合成請求。
+- **Laravel後端**：處理核心業務邏輯，存取多個資料庫。
+- **Prometheus/Grafana**：監控服務性能，生成實時儀表板。
 
 ## 環境要求
 
@@ -356,71 +356,7 @@ yarn install
    見「初始化 Laravel 專案」。
 
 3. **創建 Docker Compose 配置**：
-   在根目錄創建 `docker-compose.yml`：
-   ```yaml
-   version: '3.8'
-   services:
-     laravel_app:
-       build: ./laravel
-       ports:
-         - "8000:80"
-       volumes:
-         - ./laravel:/var/www/html
-       depends_on:
-         - postgres
-         - mongo
-         - elasticsearch
-         - rabbitmq
-     fastapi_gateway:
-       build: ./fastapi
-       ports:
-         - "80:80"
-         - "9001:9001"
-       depends_on:
-         - laravel_app
-     frontend:
-       build: ./frontend
-       ports:
-         - "3000:3000"
-     postgres:
-       image: postgres:14
-       environment:
-         POSTGRES_USER: postgres
-         POSTGRES_PASSWORD: secret
-         POSTGRES_DB: orbitpress
-       ports:
-         - "5432:5432"
-     mongo:
-       image: mongo:latest
-       environment:
-         MONGO_INITDB_ROOT_USERNAME: root
-         MONGO_INITDB_ROOT_PASSWORD: secret
-       ports:
-         - "27017:27017"
-     elasticsearch:
-       image: elasticsearch:8.10.2
-       environment:
-         - discovery.type=single-node
-       ports:
-         - "9200:9200"
-     rabbitmq:
-       image: rabbitmq:3.12
-       ports:
-         - "5672:5672"
-         - "15672:15672"
-     mailhog:
-       image: mailhog/mailhog
-       ports:
-         - "8025:8025"
-     prometheus:
-       image: prom/prometheus:v2.47.0
-       ports:
-         - "9090:9090"
-     grafana:
-       image: grafana/grafana:10.1.5
-       ports:
-         - "3001:3000"
-   ```
+   在根目錄創建 `docker-compose.yml`（見上方範例）。
 
 4. **構建並運行 Docker 容器**：
    ```bash
@@ -459,7 +395,7 @@ yarn install
                ->prefix('api')
                ->group(base_path('routes/api.php'));
            Route::middleware('web')
-               -group(base_path('routes/web.php'));
+               ->group(base_path('routes/web.php'));
            Route::middleware(['api', \App\Http\Middleware\InitializeTenancy::class])
                ->prefix('tenant-routes')
                ->group(base_path('routes/tenant.php'));
