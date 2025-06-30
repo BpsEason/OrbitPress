@@ -22,29 +22,29 @@ OrbitPress 是一個專為媒體平台設計的多租戶內容管理系統（CMS
 
 ```mermaid
 graph TD
-    A[用戶 (瀏覽器)] -->|HTTP/HTTPS| B[Ingress <br> (api.yourdomain.com, app.yourdomain.com)]
+    A[User-Browser] -->|HTTP/HTTPS| B[Ingress <br> api.yourdomain.com, app.yourdomain.com]
     
-    subgraph Kubernetes Cluster
-        B -->|路由 /| C[FastAPI 閘道 <br> (port: 80, 9001)]
-        B -->|路由 /| D[Next.js 前端 <br> (port: 3000)]
+    subgraph Kubernetes-Cluster
+        B -->|Route /| C[FastAPI-Gateway <br> port: 80, 9001]
+        B -->|Route /| D[Next.js-Frontend <br> port: 3000]
         
-        C -->|API 請求| E[Laravel 後端 <br> (port: 80, 9000)]
-        C -->|TTS 請求| F[GCP Text-to-Speech]
-        C -->|通知事件| G[RabbitMQ]
+        C -->|API Request| E[Laravel-Backend <br> port: 80, 9000]
+        C -->|TTS Request| F[GCP-Text-to-Speech]
+        C -->|Notification Event| G[RabbitMQ]
         
-        E -->|中央/租戶資料庫| H[PostgreSQL]
-        E -->|文章數據| I[MongoDB]
-        E -->|搜尋索引| J[Elasticsearch]
-        E -->|通知佇列| G
-        E -->|Email 通知| K[Mailhog/SMTP]
-        E -->|推送通知| L[Firebase]
+        E -->|Central/Tenant DB| H[PostgreSQL]
+        E -->|Article Data| I[MongoDB]
+        E -->|Search Index| J[Elasticsearch]
+        E -->|Notification Queue| G
+        E -->|Email Notification| K[Mailhog/SMTP]
+        E -->|Push Notification| L[Firebase]
         
-        M[Prometheus <br> (port: 9090)] -->|抓取指標| C
-        M -->|抓取指標| E
-        N[Grafana <br> (port: 3001)] -->|查詢數據| M
+        M[Prometheus <br> port: 9090] -->|Collect Metrics| C
+        M -->|Collect Metrics| E
+        N[Grafana <br> port: 3001] -->|Query Data| M
     end
 
-    D -->|API 請求| C
+    D -->|API Request| C
 ```
 
 **說明**：
