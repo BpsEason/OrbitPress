@@ -1,0 +1,222 @@
+version: '3.8'
+
+services:
+  laravel:
+    build:
+      context: ./laravel
+      dockerfile: Dockerfile
+    container_name: orbitpress_laravel_app
+    ports:
+      - "8000:80"
+      - "9000:9000" # 用於 Prometheus 指標
+    volumes:
+      - ./laravel:/var/www/html
+    depends_on:
+      - postgres
+      - mongodb
+      - elasticsearch
+      - rabbitmq
+      - mailhog
+    environment:
+      - APP_NAME=OrbitPress
+      - APP_ENV=local
+      - APP_KEY=
+      - APP_DEBUG=true
+      - APP_URL=http://localhost:8000
+      - LOG_CHANNEL=stack
+
+      - DB_CONNECTION=pgsql
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_DATABASE=${POSTGRES_DB}
+      - DB_USERNAME=${POSTGRES_USER}
+      - DB_PASSWORD=${POSTGRES_PASSWORD}
+
+      - MONGODB_URI=mongodb://${MONGO_INITDB_ROOT_USERNAME}:${MONGO_INITDB_ROOT_PASSWORD}@mongodb:27017/orbitpress_db
+      - MONGODB_DATABASE=orbitpress_db
+
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+      # - ELASTICSEARCH_CLOUD_ID= # 適用於 Elastic Cloud
+      # - ELASTICSEARCH_API_KEY= # 適用於 Elastic Cloud
+
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
+      - RABBITMQ_USER=guest
+      - RABBITMQ_PASSWORD=guest
+
+      - QUEUE_CONNECTION=rabbitmq # 或 'sync' 用於開發
+
+      # 郵件程式設定 (用於 NotificationService)
+      - MAIL_MAILER=smtp
+      - MAIL_HOST=mailhog
+      - MAIL_PORT=1025
+      - MAIL_USERNAME=null
+      - MAIL_PASSWORD=null
+      - MAIL_ENCRYPTION=null
+      - MAIL_FROM_ADDRESS=hello@example.com
+      - MAIL_FROM_NAME="${APP_NAME}"
+
+      # Firebase (用於 NotificationService - 概念性，需要額外設定)
+      - FIREBASE_SERVER_KEY=your_firebase_server_key
+
+      # JWT 秘密金鑰 (用於 FastAPI)
+      - JWT_SECRET_KEY=your_secret_key_for_jwt
+
+      # Sentry for Laravel
+      - SENTRY_LARAVEL_DSN=
+
+      # FastAPI Tenant Init Webhook URL
+      - FASTAPI_TENANT_INIT_WEBHOOK_URL=http://fastapi:80/webhook/tenant-init # FastAPI 容器的內部地址
+
+    networks:
+      - orbitpress-net
+
+  fastapi:
+    build:
+      context: ./fastapi
+      dockerfile: Dockerfile
+    container_name: orbitpress_fastapi_gateway
+    ports:
+      - "80:80"
+      - "9001:9001" # 用於 Prometheus 指標
+    volumes:
+      - ./fastapi:/app
+    depends_on:
+      - laravel
+    environment:
+      - LARAVEL_BACKEND_BASE_URL=http://laravel:8000
+      - LARAVEL_GRAPHQL_URL=http://laravel:8000/graphql # Laravel GraphQL 端點 (假設已配置)
+      - GCP_TTS_API_KEY=your_gcp_api_key
+      - CORS_ORIGINS=http://localhost:3000,http://localhost
+      - JWT_SECRET_KEY=your_secret_key_for_jwt
+      - SENTRY_DSN=
+      - FASTAPI_TENANT_INIT_WEBHOOK_URL=http://0.0.0.0:80/webhook/tenant-init # FastAPI 對外暴露的地址
+    networks:
+      - orbitpress-net
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: orbitpress_frontend
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules # 防止主機 node_modules 覆蓋容器中的
+    environment:
+      - NEXT_PUBLIC_API_GATEWAY_URL=http://localhost # 指向 FastAPI 閘道
+      - NEXT_PUBLIC_GA_ID= # Google Analytics 追蹤 ID
+      - CHOKIDAR_USEPOLLING=true # 適用於 Docker 中的熱重載
+    depends_on:
+      - fastapi
+    networks:
+      - orbitpress-net
+
+  postgres:
+    image: postgres:14
+    container_name: orbitpress_postgres_db
+    restart: always
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - orbitpress-net
+
+  mongodb:
+    image: mongo:latest
+    container_name: orbitpress_mongo_db
+    restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - orbitpress-net
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.10.2
+    container_name: orbitpress_elasticsearch
+    environment:
+      - xpack.security.enabled=false
+      - discovery.type=single-node
+      - bootstrap.memory_lock=true
+      - ES_JAVA_OPTS="-Xms512m -Xmx512m" # 視需要調整記憶體
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    networks:
+      - orbitpress-net
+
+  rabbitmq:
+    image: rabbitmq:3.12-management
+    container_name: orbitpress_rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672" # 管理 UI
+    networks:
+      - orbitpress-net
+
+  mailhog:
+    image: mailhog/mailhog
+    container_name: orbitpress_mailhog
+    logging:
+      driver: 'none' # 禁用 MailHog 日誌以減少噪音
+    ports:
+      - "8025:8025" # MailHog Web UI
+      - "1025:1025" # SMTP 伺服器
+    networks:
+      - orbitpress-net
+
+  prometheus:
+    image: prom/prometheus:v2.47.0 # 使用特定版本
+    container_name: orbitpress_prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    command: --config.file=/etc/prometheus/prometheus.yml
+    depends_on:
+      - laravel
+      - fastapi
+    networks:
+      - orbitpress-net
+
+  grafana:
+    image: grafana/grafana:10.1.5 # 使用特定版本
+    container_name: orbitpress_grafana
+    ports:
+      - "3001:3000" # Grafana UI
+    volumes:
+      - grafana_data:/var/lib/grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    depends_on:
+      - prometheus
+    networks:
+      - orbitpress-net
+
+volumes:
+  postgres_data:
+  mongodb_data:
+  elasticsearch_data:
+  grafana_data:
+
+networks:
+  orbitpress-net:
+    driver: bridge

@@ -1,0 +1,19 @@
+global:
+  scrape_interval: 15s # 預設抓取目標的頻率。
+
+scrape_configs:
+  - job_name: 'laravel_app'
+    static_configs:
+      - targets: ['laravel:9000'] # Laravel 應用程式指標端點
+
+  - job_name: 'fastapi_gateway'
+    static_configs:
+      - targets: ['fastapi:9001'] # FastAPI 閘道指標端點
+
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  - job_name: 'grafana'
+    static_configs:
+      - targets: ['grafana:3000'] # Grafana 的內部端口

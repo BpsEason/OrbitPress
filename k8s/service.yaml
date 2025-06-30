@@ -1,0 +1,195 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: orbitpress-laravel
+  labels:
+    app: orbitpress
+    tier: backend
+    service: laravel
+spec:
+  selector:
+    app: orbitpress
+    tier: backend
+    service: laravel
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+      name: http
+    - protocol: TCP
+      port: 9000
+      targetPort: 9000
+      name: metrics
+  type: ClusterIP # 對於內部服務使用 ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: orbitpress-fastapi
+  labels:
+    app: orbitpress
+    tier: gateway
+    service: fastapi
+spec:
+  selector:
+    app: orbitpress
+    tier: gateway
+    service: fastapi
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+      name: http
+    - protocol: TCP
+      port: 9001
+      targetPort: 9001
+      name: metrics
+  type: ClusterIP # 通常由 Ingress 暴露
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: orbitpress-frontend
+  labels:
+    app: orbitpress
+    tier: frontend
+    service: frontend
+spec:
+  selector:
+    app: orbitpress
+    tier: frontend
+    service: frontend
+  ports:
+    - protocol: TCP
+      port: 3000
+      targetPort: 3000
+      name: http
+  type: ClusterIP # 通常由 Ingress 暴露
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: orbitpress-postgres
+  labels:
+    app: orbitpress
+    tier: database
+    service: postgres
+spec:
+  selector:
+    app: orbitpress
+    tier: database
+    service: postgres
+  ports:
+    - protocol: TCP
+      port: 5432
+      targetPort: 5432
+      name: postgres
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: orbitpress-mongodb
+  labels:
+    app: orbitpress
+    tier: database
+    service: mongodb
+spec:
+  selector:
+    app: orbitpress
+    tier: database
+    service: mongodb
+  ports:
+    - protocol: TCP
+      port: 27017
+      targetPort: 27017
+      name: mongodb
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: orbitpress-elasticsearch
+  labels:
+    app: orbitpress
+    tier: search
+    service: elasticsearch
+spec:
+  selector:
+    app: orbitpress
+    tier: search
+    service: elasticsearch
+  ports:
+    - protocol: TCP
+      port: 9200
+      targetPort: 9200
+      name: http
+    - protocol: TCP
+      port: 9300
+      targetPort: 9300
+      name: tcp
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: orbitpress-rabbitmq
+  labels:
+    app: orbitpress
+    tier: queue
+    service: rabbitmq
+spec:
+  selector:
+    app: orbitpress
+    tier: queue
+    service: rabbitmq
+  ports:
+    - protocol: TCP
+      port: 5672
+      targetPort: 5672
+      name: amqp
+    - protocol: TCP
+      port: 15672
+      targetPort: 15672
+      name: management
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: orbitpress-prometheus
+  labels:
+    app: orbitpress
+    tier: monitoring
+    service: prometheus
+spec:
+  selector:
+    app: orbitpress
+    tier: monitoring
+    service: prometheus
+  ports:
+    - protocol: TCP
+      port: 9090
+      targetPort: 9090
+      name: web
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: orbitpress-grafana
+  labels:
+    app: orbitpress
+    tier: monitoring
+    service: grafana
+spec:
+  selector:
+    app: orbitpress
+    tier: monitoring
+    service: grafana
+  ports:
+    - protocol: TCP
+      port: 3000
+      targetPort: 3000
+      name: http
+  type: ClusterIP # 通常由 Ingress 暴露

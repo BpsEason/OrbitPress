@@ -1,0 +1,41 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: orbitpress-ingress
+  annotations:
+    # 使用 NGINX Ingress Controller (請根據您的 Ingress Controller 調整)
+    kubernetes.io/ingress.class: nginx
+    # Cert-Manager 注解，用於自動頒發和續訂 Let's Encrypt 憑證
+    # 假設您已配置名為 "letsencrypt-prod" 的 ClusterIssuer
+    cert-manager.io/cluster-issuer: "letsencrypt-prod" 
+    nginx.ingress.kubernetes.io/ssl-redirect: "true" # 強制 HTTPS 重定向
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m" # 增加請求體大小限制，以防 TTS 請求或其他大型請求被截斷
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "60s"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "60s"
+spec:
+  tls:
+  - hosts:
+    - api.yourdomain.com # 替換為您的 API 域名
+    - app.yourdomain.com # 替換為您的前端應用程式域名
+    secretName: orbitpress-tls-secret # Cert-Manager 將創建和管理這個 Secret
+  rules:
+  - host: api.yourdomain.com # FastAPI 閘道域名
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: orbitpress-fastapi # 指向 FastAPI Service
+            port:
+              number: 80
+  - host: app.yourdomain.com # Next.js 前端域名
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: orbitpress-frontend # 指向 Frontend Service
+            port:
+              number: 3000
